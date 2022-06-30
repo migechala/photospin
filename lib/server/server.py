@@ -1,6 +1,5 @@
 import base64
 from cgi import parse_header, parse_multipart
-import socketserver
 import game as game
 import time
 from urllib.parse import parse_qs, unquote
@@ -18,9 +17,6 @@ class MyServer(BaseHTTPRequestHandler):
     current_round = 0
     rounds = 6
 
-    def __init__(self, request: bytes, client_address: tuple[str, int], server: socketserver.BaseServer) -> None:
-        super().__init__(request, client_address, server)
-        
         
     def _waitUntil(func, timeout, period=0.25):
         mustend = time.time() + timeout
@@ -40,25 +36,25 @@ class MyServer(BaseHTTPRequestHandler):
                 count += 1
         return count
 
-    def _parseFile(path: str):
+    def _parseFile(self, path: str):
         p = path[path.rfind("/")].removesuffix(".png")
         answer = p[:path.rfind("_")]
         id = p[path.rfind("_"):]
         return {"id": id, "answer": answer}
 
-    def _getFiles(self):
+    def _getFiles(self) -> dict:
         file = {}
         path_of_the_directory = 'images'
-        ext = ('.png')
+        ext = ('.jpg', '.png', '.jpeg', '.HELM')
         for files in os.listdir(path_of_the_directory):
             if files.endswith(ext):
                 p = self._parseFile(files)
-                f = open(files, "r")
-                file[p["id"]] = [p["answer"], f.read()]
+                f = open(path_of_the_directory + '/' + files, "rb")
+                file[p["id"]] = [p["answer"], base64.urlsafe_b64encode(f.read())]
                 f.close()
-            else:
-                continue
         return file
+    
+    base64.urlsafe_b64encode
         
 
     def _set_headers(self):
@@ -82,16 +78,14 @@ class MyServer(BaseHTTPRequestHandler):
                     keep_blank_values=True)
         else:
             postvars = {}
-        print(postvars.keys()) 
         image_b64 = unquote(postvars[b"image"][0].decode("utf-8"))
-
         if image_b64.find("%") != -1:
             print("Error! {}".format(image_b64[image_b64.find("%") - 2 : image_b64.find("%") + 2]))
 
         file_name = postvars[b"name"][0].decode("utf-8")
         id = postvars[b"id"][0].decode("utf-8")
  
-        print("file name {} from user with id {}".format(file_name, id))
+#        print("file name {} from user with id {}".format(file_name, id))
         type_ext = file_name[file_name.find("."):]
 
         open("images/{}_{}{}".format(file_name[:file_name.find(".")],
@@ -105,15 +99,15 @@ class MyServer(BaseHTTPRequestHandler):
         
         files = self._getFiles()
         thisRound = game.Round(files)
-
         for self.round in range(self.rounds):
-            random_key = thisRound.getRandomImage()
-            random_answer = files[random_key][0] # 0 is the name of image
-            random_image = files[random_key][1] # 1 is the base64 representation of the image
+            random_key: str = thisRound.getRandomImage()
+            random_answer: str = files[random_key][0] # 0 is the name of image
+            random_image: bytes = files[random_key][1] # 1 is the base64 representation of the image
 
-            self.wfile.write(random_key)
-            self.wfile.write(random_answer)
-            self.wfile.write(random_image)
+            data: bytes = bytes(random_key, "utf-8") + bytes(" ", "utf-8") + bytes(random_answer, "utf-8") + bytes(" ", "utf-8") + random_image
+            
+
+            self.wfile.write(data)            
             break
 
         return
@@ -121,7 +115,7 @@ class MyServer(BaseHTTPRequestHandler):
     def do_PUT(self):
         self.do_POST()
 
-if __name__ == "__main__":        
+if __name__ == "__main__":
     webServer = HTTPServer((hostName, serverPort), MyServer)
     print("Server started http://%s:%s" % (hostName, serverPort))
 

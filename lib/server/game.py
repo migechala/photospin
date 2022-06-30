@@ -7,6 +7,5 @@ class Round:
         
 
     def getRandomImage(self) -> str:
-        key = random.choice(list(self.player_images.items()))
-        self.player_images.pop(key)
+        key = next(iter(self.player_images))
         return key

@@ -30,6 +30,8 @@ class _HomePageState extends State<HomePage> {
   final objName = TextEditingController();
   String id = const Uuid().v1();
 
+  String body = "";
+
   @override
   void dispose() {
     objName.dispose();
@@ -118,9 +120,17 @@ class _HomePageState extends State<HomePage> {
       "name": fileName,
       "id": id
     }).then((result) {
-      setStatus(result.statusCode == 200
-          ? result.body
-          : "$errMessage ${result.statusCode}");
+      if (result.statusCode == 200) {
+        setStatus("Uploaded!");
+        body = result.body;
+        if (body.contains("fores")) {
+          print("Works!!");
+        } else {
+          print("filename not found :(");
+        }
+      } else {
+        setStatus("$errMessage ${result.statusCode}");
+      }
     }).catchError((error) {
       setStatus(error.toString());
     });
@@ -162,9 +172,7 @@ class _HomePageState extends State<HomePage> {
                 fontSize: 20.0,
               ),
             ),
-            const SizedBox(
-              height: 20.0,
-            ),
+            const SizedBox(height: 20.0),
             Container(
                 alignment: Alignment.bottomCenter,
                 child: ElevatedButton(
